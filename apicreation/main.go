@@ -26,10 +26,6 @@ type JsonResponse struct {
 	Message string    `json:"message"`
 }
 
-// type error interface {
-// 	Error() string
-// }
-
 func setupDB() *sql.DB {
 	connection_str := "postgres://postgres:test@localhost:5433/ajithmenon?sslmode=disable"
 	db, err := sql.Open("postgres", connection_str)
@@ -49,44 +45,35 @@ func GetStudents(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 
 	db := setupDB()
 
-	query := "SELECT * FROM STUDEN"
+	query := "SELECT * FROM STUDENT"
 
 	rows, er := db.Query(query)
 	if er != nil {
 		fmt.Printf(" Query Error %v \n", er)
+		response = JsonResponse{Type: "failed", Message: er.Error()}
+		json.NewEncoder(w).Encode(response)
+	} else {
 
-		// error := er.Error()
-		// response = JsonResponse{Type: "success", Message: error}
-		// json.NewEncoder(w).Encode(response)
-	}
+		for rows.Next() {
+			var id int
+			var age int
+			var first_name string
+			var last_name string
+			var roll_no string
+			var school string
 
-	for rows.Next() {
-		var id int
-		var age int
-		var first_name string
-		var last_name string
-		var roll_no string
-		var school string
+			if err := rows.Scan(&id, &first_name, &last_name, &roll_no, &age, &school); err != nil {
+				fmt.Printf(" Row Error %v \n", err)
+			}
 
-		if err := rows.Scan(&id, &first_name, &last_name, &roll_no, &age, &school); err != nil {
-			fmt.Printf(" Row Error %v \n", err)
+			student := Student{ID: id, FirstName: first_name, LastName: last_name, RollNo: roll_no, Age: age, School: school}
+			students = append(students, student)
+
 		}
 
-		student := Student{ID: id, FirstName: first_name, LastName: last_name, RollNo: roll_no, Age: age, School: school}
-		students = append(students, student)
-
+		response = JsonResponse{Type: "success", Data: students}
+		json.NewEncoder(w).Encode(response)
 	}
-
-	// data, er := json.Marshal(students)
-	// if er != nil {
-	// 	fmt.Println("Error in Data", er)
-	// }
-	// w.Write(data)
-
-	// json.NewEncoder(w).Encode(students)
-
-	response = JsonResponse{Type: "success", Data: students}
-	json.NewEncoder(w).Encode(response)
 
 }
 
@@ -103,6 +90,8 @@ func AddStudent(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	_, er := db.Query(query, student.FirstName, student.LastName, student.RollNo, student.Age, student.School)
 	if er != nil {
 		fmt.Printf(" Query Error %v \n", er)
+		response = JsonResponse{Type: "failed", Message: er.Error()}
+		json.NewEncoder(w).Encode(response)
 	} else {
 		// w.Write([]byte("Successfully Added Student : "))
 		// json.NewEncoder(w).Encode(student)
@@ -114,6 +103,7 @@ func AddStudent(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 }
 
 func UpdateStudent(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	var response JsonResponse
 	var student *Student
 	json.NewDecoder(r.Body).Decode(&student)
 
@@ -124,14 +114,17 @@ func UpdateStudent(w http.ResponseWriter, r *http.Request, _ httprouter.Params) 
 	_, er := db.Query(query, student.LastName, student.RollNo)
 	if er != nil {
 		fmt.Printf(" Query Error %v \n", er)
+		response = JsonResponse{Type: "failed", Message: er.Error()}
+		json.NewEncoder(w).Encode(response)
 	} else {
-		w.Write([]byte("Successfully Updated Student"))
+		response = JsonResponse{Type: "success", Message: "Successfully Updated Student"}
+		json.NewEncoder(w).Encode(response)
 	}
 
 }
 
 func DeleteStudent(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-
+	var response JsonResponse
 	// var student *Student
 	// json.NewDecoder(r.Body).Decode(&student)
 
@@ -143,8 +136,11 @@ func DeleteStudent(w http.ResponseWriter, r *http.Request, ps httprouter.Params)
 
 	if er != nil {
 		fmt.Printf(" Query Error %v \n", er)
+		response = JsonResponse{Type: "failed", Message: er.Error()}
+		json.NewEncoder(w).Encode(response)
 	} else {
-		w.Write([]byte("Deleted the Student "))
+		response = JsonResponse{Type: "success", Message: "Deleted the Student"}
+		json.NewEncoder(w).Encode(response)
 	}
 
 }
